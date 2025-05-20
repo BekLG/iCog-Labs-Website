@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: strapi
+    env: node
+    plan: starter
+    buildCommand: npm install && npm build
+    startCommand: npm start
+    healthCheckPath: /_health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: ~16.13.0
+      - key: NODE_ENV
+        value: production
+
+      # Application secrets
+      - key: APP_KEYS
+        sync: false
+      - key: API_TOKEN_SALT
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      - key: TRANSFER_TOKEN_SALT
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+      # Database config (will override individual settings)
+      - key: DATABASE_CLIENT
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: strapi
+          property: connectionString
+      - key: DATABASE_SSL
+        sync: false
+
+      # Cloudinary
+      - key: CLOUDINARY_NAME
+        sync: false
+      - key: CLOUDINARY_KEY
+        sync: false
+      - key: CLOUDINARY_SECRET
+        sync: false
+
+databases:
+  - name: strapi
+    plan: basic-256mb
+    diskSizeGB: 1
