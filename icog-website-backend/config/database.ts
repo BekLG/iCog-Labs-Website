@@ -1,60 +1,32 @@
-import path from 'path';
+import { parse } from 'pg-connection-string';
+// import { StrapiConfig } from '@strapi/types';
 
-export default ({ env }) => {
-  const client = env('DATABASE_CLIENT', 'sqlite');
+export default ({ env }: { env: (key: string, defaultValue?: string) => string }) => {
+  const dbUrl = env('DATABASE_URL');
+  const config = parse(dbUrl);
 
-  const connections = {
-    mysql: {
-      connection: {
-        host: env('DATABASE_HOST', 'localhost'),
-        port: env.int('DATABASE_PORT', 3306),
-        database: env('DATABASE_NAME', 'strapi'),
-        user: env('DATABASE_USERNAME', 'strapi'),
-        password: env('DATABASE_PASSWORD', 'strapi'),
-        ssl: env.bool('DATABASE_SSL', false) && {
-          key: env('DATABASE_SSL_KEY'),
-          cert: env('DATABASE_SSL_CERT'),
-          ca: env('DATABASE_SSL_CA'),
-          capath: env('DATABASE_SSL_CAPATH'),
-          cipher: env('DATABASE_SSL_CIPHER'),
-          rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
-        },
-      },
-      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
-    },
-    postgres: {
-      connection: env('DATABASE_URL')
-        ? {
-            connectionString: env('DATABASE_URL'),
-            ssl: env.bool('DATABASE_SSL', true) && {
-              rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
-            },
-          }
-        : {
-            host: env('DATABASE_HOST', 'localhost'),
-            port: env.int('DATABASE_PORT', 5432),
-            database: env('DATABASE_NAME', 'strapi'),
-            user: env('DATABASE_USERNAME', 'strapi'),
-            password: env('DATABASE_PASSWORD', 'strapi'),
-            ssl: env.bool('DATABASE_SSL', false) && {
-              rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
-            },
-          },
-      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
-    },
-    sqlite: {
-      connection: {
-        filename: path.join(__dirname, '..', '..', env('DATABASE_FILENAME', '.tmp/data.db')),
-      },
-      useNullAsDefault: true,
-    },
-  };
+  const sslEnabled = env('DATABASE_SSL', 'true') === 'true';
 
-  return {
+  const connection = {
+    client: 'postgres',
     connection: {
-      client,
-      ...connections[client],
-      acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
+      host: config.host,
+      port: config.port ? parseInt(config.port, 10) : 5432,
+      database: config.database || '',
+      user: config.user || '',
+      password: config.password || '',
+      ssl: sslEnabled
+        ? {
+            rejectUnauthorized: env('DATABASE_SSL_REJECT_UNAUTHORIZED', 'false') === 'true',
+          }
+        : false,
     },
+    pool: {
+      min: parseInt(env('DATABASE_POOL_MIN', '2'), 10),
+      max: parseInt(env('DATABASE_POOL_MAX', '10'), 10),
+    },
+    acquireConnectionTimeout: parseInt(env('DATABASE_CONNECTION_TIMEOUT', '60000'), 10),
   };
+
+  return { connection };
 };
